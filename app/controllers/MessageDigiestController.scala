@@ -26,7 +26,7 @@ class MessageDigiestController @Inject()(digestService: MessageDigestService)(im
 
   def digest(rh: RequestHeader): FilePartHandler[String] = {
     case FileInfo(key, fileName, contentType) =>
-      val algo = rh.flash.get("algorithm").get
+      val Some(Seq(algo, _*)) = rh.queryString.get("algorithm")
       Accumulator(digestService.sink(algo)).map{ d =>
        FilePart(key, fileName, contentType, digestService.finalize(d))
      }

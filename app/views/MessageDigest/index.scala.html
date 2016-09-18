@@ -10,12 +10,12 @@
 * argument is an `Html` object containing the body of the page.
 *@
 @main("Message digest") {
-    <script src="@routes.Assets.versioned("javascripts/flash.js")" type="application/javascript"></script>
-    @helper.form(action = routes.MessageDigiestController.upload(), 'enctype -> "multipart/form-data", 'class -> "flash"){
+    <script src="@routes.Assets.versioned("javascripts/pre-submit.js")" type="application/javascript"></script>
+    @helper.form(action = routes.MessageDigiestController.upload(), 'enctype -> "multipart/form-data", 'class -> "pre-process"){
     <div>
             <div>
                 <label>Algorithm:</label>
-                <select name="algorithm" data-scope="flash">
+                <select name="algorithm">
                     @for(algo <- algorithms){
                         <option>@algo</option>
                     }
