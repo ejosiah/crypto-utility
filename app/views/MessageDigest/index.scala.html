@@ -1,0 +1,33 @@
+@*
+* This template takes a single argument, a String containing a
+* message to display.
+*@
+@(algorithms: Seq[String])
+
+@*
+* Call the `main` template with two arguments. The first
+* argument is a `String` with the title of the page, the second
+* argument is an `Html` object containing the body of the page.
+*@
+@main("Message digest") {
+    <script src="@routes.Assets.versioned("javascripts/flash.js")" type="application/javascript"></script>
+    @helper.form(action = routes.MessageDigiestController.upload(), 'enctype -> "multipart/form-data", 'class -> "flash"){
+    <div>
+            <div>
+                <label>Algorithm:</label>
+                <select name="algorithms" data-scope="flash">
+                    @for(algo <- algorithms){
+                        <option>@algo</option>
+                    }
+                </select>
+                &nbsp;
+                <input type="file" name="file"  />
+                &nbsp;
+                <input type="submit" value="upload">
+            </div>
+            <div>
+            </div>
+    </div>
+    }
+
+}
