@@ -4,7 +4,7 @@ import javax.inject._
 
 import play.api.libs.streams.Accumulator
 import play.api.mvc.MultipartFormData.FilePart
-import play.api.mvc.{Action, Controller}
+import play.api.mvc.{Action, Controller, RequestHeader}
 import play.core.parsers.Multipart.{FileInfo, FilePartHandler}
 import services.MessageDigestService
 
@@ -19,15 +19,14 @@ class MessageDigiestController @Inject()(digestService: MessageDigestService)(im
     Future.successful( Ok(views.html.MessageDigest.index(digestService.algorithms)) )
   }
 
-  def upload = Action(parse.multipartFormData(digest)){ implicit  request =>
+  def upload = Action(Utility.multipartFormData(digest)){ implicit  request =>
     val digest = request.body.files.head.ref
     Ok(views.html.MessageDigest.digest(digest))
   }
 
-  def digest: FilePartHandler[String] = {
+  def digest(rh: RequestHeader): FilePartHandler[String] = {
     case FileInfo(key, fileName, contentType) =>
-      require(FlashContext.isDefined("algorithm"), "algorithm required")
-      val algo = FlashContext.get("algorithm").get
+      val algo = rh.flash.get("algorithm").get
       Accumulator(digestService.sink(algo)).map{ d =>
        FilePart(key, fileName, contentType, digestService.finalize(d))
      }
