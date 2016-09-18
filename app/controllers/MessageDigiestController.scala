@@ -26,7 +26,9 @@ class MessageDigiestController @Inject()(digestService: MessageDigestService)(im
 
   def digest: FilePartHandler[String] = {
     case FileInfo(key, fileName, contentType) =>
-     Accumulator(digestService.sink("MD5")).map{ d =>
+      require(FlashContext.isDefined("algorithm"), "algorithm required")
+      val algo = FlashContext.get("algorithm").get
+      Accumulator(digestService.sink(algo)).map{ d =>
        FilePart(key, fileName, contentType, digestService.finalize(d))
      }
   }

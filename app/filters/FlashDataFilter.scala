@@ -3,7 +3,8 @@ package filters
 import javax.inject.{Inject, Singleton}
 
 import akka.stream.Materializer
-import play.api.mvc.{Filter, RequestHeader, Result, Results}
+import controllers.FlashContext
+import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -16,11 +17,12 @@ class FlashDataFilter @Inject()(implicit override val mat: Materializer, exec: E
   def apply(nextFilter: (RequestHeader) => Future[Result])(rh: RequestHeader): Future[Result] = {
     rh.path match {
       case "/flash" =>
-        // TODO add flash data to session
+        val data = rh.queryString.map(entry => (entry._1, entry._2.head))
+        FlashContext.set(Some(Flash(data)))
         Future.successful(Results.Ok)
       case _ =>
         nextFilter(rh).map { result =>
-          // TODO remove flash data
+          FlashContext.clear
           result
         }
     }
