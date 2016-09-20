@@ -20,7 +20,7 @@ class MessageDigiestController @Inject()(digestService: MessageDigestService)(im
   }
 
   def upload = Action(Utility.multipartFormData(digest)){ implicit  request =>
-    val digest = request.body.files.head.ref
+    val digest = request.body.files.map(f => (f.filename, f.ref))
     Ok(views.html.MessageDigest.digest(digest))
   }
 
@@ -28,7 +28,7 @@ class MessageDigiestController @Inject()(digestService: MessageDigestService)(im
     case FileInfo(key, fileName, contentType) =>
       val Some(Seq(algo, _*)) = rh.queryString.get("algorithm")
       Accumulator(digestService.sink(algo)).map{ d =>
-       FilePart(key, fileName, contentType, digestService.finalize(d))
+       FilePart(key, fileName, contentType, d)
      }
   }
 }

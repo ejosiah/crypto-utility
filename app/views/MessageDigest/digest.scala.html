@@ -1,5 +1,12 @@
-@(digest: String)
+@(digest: Seq[(String, String)])
 
 @main("digest"){
-    <h3>@digest</h3>
+    <div>
+     <h3>Result</h3>
+        <ul>
+        @for((n, d) <- digest){
+            <li><pre>@n   ->   @d</pre></li>
+        }
+        </ul>
+    </div>
 }
