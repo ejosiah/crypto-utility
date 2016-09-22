@@ -43,7 +43,7 @@ class DigesterSpec extends PlaySpec{
       result mustBe expected
     }
 
-    "trying to digest using an invalid algorithm should fail" in {
+    "trying to digest using an invalid algorithm" in {
       a [NoSuchAlgorithmException] should be thrownBy{
         digest("I'm feeling really luck :)", "UNKNOWN")
       }
