@@ -19,16 +19,12 @@ object Client{
   case class OffLine(user: UserInfo)
   case class Get(clientId: String)
 
-  def props(out: ActorRef) = Props(classOf[Client], out)
+  def props(registry: ActorRef)(out: ActorRef) = Props(classOf[Client], out, registry)
 
-  def proxy(client: ActorRef) = Props(classOf[ClientRegistry], client)
+  def registry = Props(classOf[ClientRegistry])
 
-  def flow(implicit factory: ActorRefFactory, mat: Materializer): Flow[Event, Event, _] = {
-    ActorFlow.actorRef(props, overflowStrategy = OverflowStrategy.fail)
-  }
-
-  def stringFlow(implicit factory: ActorRefFactory, mat: Materializer): Flow[String, String, _] = {
-    ActorFlow.actorRef(props, overflowStrategy = OverflowStrategy.fail)
+  def flow(registry: ActorRef)(implicit factory: ActorRefFactory, mat: Materializer): Flow[Event, Event, _] = {
+    ActorFlow.actorRef(props(registry), overflowStrategy = OverflowStrategy.fail)
   }
 }
 
@@ -44,23 +40,26 @@ class Client(out: ActorRef, registry: ActorRef) extends Actor{
     case Initialized(isNew, user) =>
       mayBeUser = Some(user)
       registry ! Online(user)
-    case msg => out ! msg
+      sender ! UserCreated(user)
   }
 
 
   override def postStop(): Unit = Logger.info(s"$self disconnected from server")
 }
 
-class ClientRegistry(client: ActorRef) extends Actor{
+class ClientRegistry extends Actor{
   import Client._
 
   var users = mutable.Map[String,  (UserInfo, ActorRef)]()
+  var refs = Set[ActorRef]()
 
   override def receive = {
-    case Online(user) => users += user.clientId.get -> (user -> sender())
-    case OffLine(user) => users -= user.clientId.get
+    case Online(user) =>
+      users += user.clientId -> (user -> sender())
+      Logger.info(s"$user registered")
+    case OffLine(user) => users -= user.clientId
     case Get(clientId) => sender() ! users.get(clientId)
-    case msg => client ! msg
+    case (ref: ActorRef, msg) => ref forward msg
   }
 }
 

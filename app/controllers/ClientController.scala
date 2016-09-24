@@ -13,6 +13,8 @@ import play.api.mvc.{WebSocket, Controller}
 @Singleton
 class ClientController @Inject() (implicit system: ActorSystem, mat: Materializer) extends Controller {
 
-  def handler = WebSocket.accept[Event, Event]{ r => Client.flow }(Codec())
+  lazy val registry = system.actorOf(Client.registry, "client-registry")
+
+  def handler = WebSocket.accept[Event, Event]{ r => Client.flow(registry) }(Codec())
 
 }
