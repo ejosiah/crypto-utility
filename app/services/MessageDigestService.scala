@@ -20,7 +20,7 @@ class MessageDigestService {
 
   def algorithms: Seq[String] = Security.getAlgorithms("MessageDigest").asScala.toSeq
 
-  def sink[Mat](algorithm: String): Sink[ByteString, Future[String]] = {
+  def sink(algorithm: String): Sink[ByteString, Future[String]] = {
     Flow
       .fromGraph(Crypto.digester(algorithm))
       .toMat(Sink.head[String])((l, r) => r)

@@ -35,7 +35,7 @@ class DigesterSpec extends PlaySpec{
       val msgToDigest = "I'm feeling really luck :)"
       val expected = {
         val digester = MessageDigest.getInstance(MD5)
-        val e = Base64.getEncoder.encode(digester.digest(msgToDigest.getBytes))
+        val e = Crypto.toHex(digester.digest(msgToDigest.getBytes))
         new String(e)
       }
 

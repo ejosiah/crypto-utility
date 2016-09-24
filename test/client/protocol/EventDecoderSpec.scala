@@ -1,12 +1,14 @@
 package client.protocol
 
+import java.security.KeyPairGenerator
 import java.util.UUID
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.util.ByteString
-import client.protocol.Events.{InvalidFormatException, EventSerializer, Initialized}
+import com.cryptoutility.protocol.Events._
+import com.cryptoutility.protocol.EventSerializer
 import org.scalatestplus.play.PlaySpec
 import play.api.http.websocket.BinaryMessage
 
@@ -23,9 +25,13 @@ class EventDecoderSpec extends PlaySpec{
   implicit val system = ActorSystem("test-system")
   implicit val mat = ActorMaterializer()
 
+  def publicKey = {
+    KeyPairGenerator.getInstance("RSA").generateKeyPair().getPublic
+  }
+
   "event decode" should{
     "decode byte streams to an event" in {
-      val expected = Initialized(true, UserInfo("James", "Carl", "james@example.com", None))
+      val expected = Initialized(true, UserInfo("James", "Carl", "james@example.com", publicKey, None))
       val serialized = EventSerializer.serialize(expected)
 
       val f =

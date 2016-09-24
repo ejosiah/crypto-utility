@@ -6,8 +6,8 @@ import akka.actor.Actor.Receive
 import akka.actor._
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.stream.{OverflowStrategy, Materializer}
-import client.protocol.Events.{UserCreated, Initialized, Event}
-import client.protocol.{Events, EventEncoder, EventDecoder}
+import client.protocol.{EventEncoder, EventDecoder}
+import com.cryptoutility.protocol.Events._
 import play.api.libs.streams.ActorFlow
 import play.api.Logger
 import scala.language.postfixOps
@@ -35,7 +35,7 @@ class Client(out: ActorRef) extends Actor{
 
 
   override def receive = {
-    case Initialized(isNew, userInfo, _) =>
+    case Initialized(isNew, userInfo) =>
       val user = if(isNew){
         val clientId = UUID.randomUUID().toString
         userInfo.copy(clientId = Some(clientId))

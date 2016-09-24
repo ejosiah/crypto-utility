@@ -36,11 +36,11 @@ class Digester(algorithm: String) extends GraphStage[FlowShape[ByteString, Strin
       override def onUpstreamFinish(): Unit = {
         val digest = {
           val d = digester.digest()
-          val e = Base64.getEncoder.encode(d)
-          new String(e)
+          Crypto.toHex(d)
         }
 
         emit(out, digest)
+        completeStage()
       }
     })
   }

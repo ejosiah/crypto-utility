@@ -4,7 +4,8 @@ import akka.stream.scaladsl.Flow
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import akka.util.ByteString
-import client.protocol.Events.{Event, EventSerializer}
+import com.cryptoutility.protocol.EventSerializer
+import com.cryptoutility.protocol.Events.Event
 import play.api.http.websocket._
 import play.api.mvc.WebSocket.MessageFlowTransformer
 
@@ -40,6 +41,7 @@ class EventDecoder extends GraphStage[FlowShape[Message, Event]]{
     }
 
     setHandler(in, new InHandler {
+      import EventSerializer._
 
       override def onPush(): Unit = {
         grab(in) match {
@@ -48,10 +50,10 @@ class EventDecoder extends GraphStage[FlowShape[Message, Event]]{
           case msg => throw new IllegalArgumentException(s"Invalid message: $msg")
         }
 
-        if(buf.length >= HeaderLength && length == 0) length = Events.readInt(buf.slice(0, Events.IntSize).toArray)
+        if(buf.length >= HeaderLength && length == 0) length = readInt(buf.slice(0, IntSize).toArray)
 
         if(buf.length == length){
-          val decoded = EventSerializer.deserialize(buf.toArray)
+          val decoded = deserialize(buf.toArray)
           reset()
           emit(out, decoded)
         }else{

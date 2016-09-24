@@ -7,7 +7,7 @@ import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.util.ByteString
 import client.protocol.Codec
-import client.protocol.Events.Event
+import com.cryptoutility.protocol.Events.Event
 import play.api.mvc.{WebSocket, Controller}
 
 @Singleton
