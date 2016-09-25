@@ -24,6 +24,7 @@ class EventDecoderSpec extends PlaySpec{
 
   implicit val system = ActorSystem("test-system")
   implicit val mat = ActorMaterializer()
+  val id = () => UUID.randomUUID().toString
 
   def publicKey = {
     KeyPairGenerator.getInstance("RSA").generateKeyPair().getPublic
@@ -31,7 +32,7 @@ class EventDecoderSpec extends PlaySpec{
 
   "event decode" should{
     "decode byte streams to an event" in {
-      val expected = Initialized(true, UserInfo("James", "Carl", "james@example.com", publicKey, None))
+      val expected = Initialized(true, UserInfo("James", "Carl", "james@example.com", publicKey, id()))
       val serialized = EventSerializer.serialize(expected)
 
       val f =

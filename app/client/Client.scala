@@ -35,7 +35,6 @@ class Client(out: ActorRef, registry: ActorRef) extends Actor{
 
   override def preStart = Logger.info(s"$self connected to server")
 
-
   override def receive = {
     case Initialized(isNew, user) =>
       mayBeUser = Some(user)
