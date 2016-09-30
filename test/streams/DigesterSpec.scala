@@ -16,10 +16,7 @@ import scala.language.postfixOps
 /**
   * Created by jay on 20/09/2016.
   */
-class DigesterSpec extends PlaySpec{
-
-  implicit val system = ActorSystem("test-system")
-  implicit val mat = ActorMaterializer()
+class DigesterSpec extends PlaySpec with Actors{
 
   def digest(msg: String, algorithm: String) = {
     val source = Source.single(ByteString(msg))

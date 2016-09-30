@@ -1,0 +1,12 @@
+@(success: Boolean)
+
+@main("encryption status"){
+    <div>
+        <h3>Encryption Status</h3>
+        @if(success){
+            <h4>your file was successfully encrypted and sent</h4>
+        }else{
+            <h4 class="error" style="color:red;">We where unable to encrypted your file, please try again later</h4>
+        }
+    </div>
+}

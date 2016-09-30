@@ -8,6 +8,7 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.util.ByteString
+import com.cryptoutility.protocol.crypto.Decrypt
 import org.scalatestplus.play.PlaySpec
 
 import scala.concurrent.Await
@@ -18,12 +19,11 @@ import Cipher._
 /**
   * Created by jay on 20/09/2016.
   */
-class EncryptorSpec extends PlaySpec{
-
-  implicit val system = ActorSystem("test-system")
-  implicit val mat = ActorMaterializer()
+class EncryptorSpec extends PlaySpec with Actors{
 
   val algorithm = "AES/ECB/PKCS5Padding"
+
+  def decrypt = Decrypt.decrypt0(new String(_), algorithm)(_, _)
 
   def encryptionKey = {
     KeyGenerator.getInstance("AES").generateKey()
@@ -49,13 +49,7 @@ class EncryptorSpec extends PlaySpec{
       cipher.init(Cipher.ENCRYPT_MODE, key)
       val actual = encrypt(clearText, cipher)
 
-
-
-      val decrypted = {
-        val cipher = Cipher.getInstance(algorithm)
-        cipher.init(DECRYPT_MODE, key)
-        new String(cipher.doFinal(actual.toArray))
-      }
+      val decrypted = decrypt(actual.toArray, key)
 
       decrypted mustBe clearText
     }

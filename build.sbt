@@ -11,6 +11,7 @@ libraryDependencies ++= Seq(
   cache,
   ws,
   "crypto-utility" %% "crypto-utility-protocol" % "0.1.0" % Compile,
-  "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % Test
+  "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % Test,
+  "com.typesafe.akka" %% "akka-testkit" % "2.4.10" % Test
 )
 

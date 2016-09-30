@@ -1,0 +1,26 @@
+@*
+* This template takes a single argument, a String containing a
+* message to display.
+*@
+@()
+
+@*
+* Call the `main` template with two arguments. The first
+* argument is a `String` with the title of the page, the second
+* argument is an `Html` object containing the body of the page.
+*@
+@main("Encryption service") {
+    <script src="@routes.Assets.versioned("javascripts/pre-submit.js")" type="application/javascript"></script>
+    @helper.form(action = routes.EncryptionController.upload(), 'enctype -> "multipart/form-data", 'class -> "pre-process"){
+    <div>
+        <input type="hidden" name="sender" value="self" />
+        <div>
+            &nbsp;
+            <input type="file" name="file"  />
+            &nbsp;
+            <input type="submit" value="encrypt" />
+        </div>
+    </div>
+    }
+
+}

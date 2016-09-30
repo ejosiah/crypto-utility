@@ -3,16 +3,25 @@ package services
 import javax.inject.{Inject, Singleton}
 
 import akka.actor.ActorSystem
-import akka.stream.{Materializer, IOResult}
-import akka.stream.scaladsl.{Flow, Sink}
-import akka.util.ByteString
-import streams.Crypto
+import akka.stream.scaladsl.Sink
+import akka.util.{ByteString, Timeout}
+import client.Client.{EndOfStream, StreamingResult}
+import client.ClientService
 
-import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
+import scala.language.postfixOps
 
 @Singleton
-class EncryptionService @Inject() (implicit system: ActorSystem, mat: Materializer) {
+class EncryptionService @Inject()(clientService: ClientService)
+                                 (implicit system: ActorSystem, ec: ExecutionContext) {
 
-  def sink(filename: String, contentType: String): Sink[ByteString, Future[IOResult]] = ???
+  implicit val timeout = Timeout(5 seconds)
+
+  def sink(clientId: String, filename: String, contentType: Option[String], sender: String)
+    : Sink[ByteString, Future[Future[StreamingResult]]] = {
+    val (client, streamingResult) = clientService.startStreaming(clientId, filename, sender, contentType)
+    Sink.actorRef(client, EndOfStream).mapMaterializedValue(_ => streamingResult)
+  }
 
 }

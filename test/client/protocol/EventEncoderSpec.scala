@@ -29,7 +29,7 @@ class EventEncoderSpec extends PlaySpec{
 
   "event encode" should{
     "encode Event to a byte stream" in {
-      val expected = Initialized(isNew = false, UserInfo("James", "Carl", "james@example.com", publicKey, Some(UUID.randomUUID().toString)))
+      val expected = Initialized(isNew = false, UserInfo("James", "Carl", "james@example.com", publicKey, UUID.randomUUID().toString))
 
       val f =
         Source.single(expected)

@@ -1,7 +1,10 @@
+import akka.actor.ActorRef
+import client.{DefaultClientService, ClientService}
 import com.google.inject.AbstractModule
-import java.time.Clock
+import services.{DefaultNextSecret, NextSecret, FindClientById}
 
-import services.{ApplicationTimer, AtomicCounter, Counter, MessageDigestService}
+import scala.concurrent.Future
+
 
 /**
  * This class is a Guice module that tells Guice how to bind several
@@ -16,13 +19,8 @@ import services.{ApplicationTimer, AtomicCounter, Counter, MessageDigestService}
 class Module extends AbstractModule {
 
   override def configure() = {
-    // Use the system clock as the default implementation of Clock
-    bind(classOf[Clock]).toInstance(Clock.systemDefaultZone)
-    // Ask Guice to create an instance of ApplicationTimer when the
-    // application starts.
-    bind(classOf[ApplicationTimer]).asEagerSingleton()
-    // Set AtomicCounter as the implementation for Counter.
-    bind(classOf[Counter]).to(classOf[AtomicCounter])
+    bind(classOf[NextSecret]).to(classOf[DefaultNextSecret]).asEagerSingleton()
+    bind(classOf[ClientService]).to(classOf[DefaultClientService]).asEagerSingleton()
   }
 
 }
