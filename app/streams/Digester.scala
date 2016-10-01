@@ -3,9 +3,10 @@ package streams
 import java.security.MessageDigest
 import java.util.Base64
 
-import akka.stream.{Inlet, Outlet, Attributes, FlowShape}
-import akka.stream.stage.{InHandler, OutHandler, GraphStageLogic, GraphStage}
+import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
+import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.util.ByteString
+import com.cryptoutility.protocol.crypto.Hex
 
 /**
   * Created by jay on 20/09/2016.
@@ -36,7 +37,7 @@ class Digester(algorithm: String) extends GraphStage[FlowShape[ByteString, Strin
       override def onUpstreamFinish(): Unit = {
         val digest = {
           val d = digester.digest()
-          Crypto.toHex(d)
+          Hex(d)
         }
 
         emit(out, digest)
