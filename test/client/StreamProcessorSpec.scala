@@ -1,6 +1,7 @@
 package client
 
 import java.security.{Key, KeyPairGenerator}
+import java.util.UUID
 import javax.crypto.KeyGenerator
 
 import akka.Done
@@ -8,8 +9,8 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{DefaultTimeout, ImplicitSender, TestKit}
 import akka.util.ByteString
 import client.Client.StreamingResult
-import com.cryptoutility.protocol.Events.{StreamEnded, StreamStarted}
-import com.cryptoutility.protocol.crypto.{Base64Encode, Encrypt}
+import com.cryptoutility.protocol.Events.{StreamPart, StreamEnded, StreamStarted}
+import com.cryptoutility.protocol.crypto.{MD5, Base64Encode, Encrypt}
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{MustMatchers, WordSpecLike, Matchers, BeforeAndAfterAll}
 import scala.concurrent.duration._
@@ -22,12 +23,8 @@ import scala.util.Try
 class StreamProcessorSpec extends TestKit(ActorSystem("test-system", ConfigFactory.parseString(""))) with DefaultTimeout with ImplicitSender
   with WordSpecLike with MustMatchers with BeforeAndAfterAll{
 
-//  def streamProcessor(out: ActorRef, encrypt: (Array[Byte], Key) => Array[Byte]
-//                      , encryptEncoded: (Array[Byte], Key) => String
-//                      , wrap: Key => String, secret: => Key)
-
   def keyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair()
-
+  def id = UUID.randomUUID().toString
   def encrypt: (Array[Byte], Key) => Array[Byte] = (bytes, key) => bytes
   def encryptEncoded: (Array[Byte], Key) => String = (bytes, key) => new String(bytes)
   def wrap: Key => String = (k) => new String(k.getEncoded)
@@ -35,7 +32,7 @@ class StreamProcessorSpec extends TestKit(ActorSystem("test-system", ConfigFacto
   def f = "test.txt"
   def ct = "application/text"
   def fr = "test@example.com"
-  lazy val streamProcessor = system.actorOf(Client.streamProcessor(self, encrypt, encryptEncoded, wrap))
+  lazy val streamProcessor = system.actorOf(Client.streamProcessor(self, id, encrypt, encryptEncoded, wrap))
 
   val sequence = {
     Seq(
@@ -48,15 +45,23 @@ class StreamProcessorSpec extends TestKit(ActorSystem("test-system", ConfigFacto
     ).zipWithIndex
   }
 
+  val digeset = MD5(
+    (1 to 4)
+      .map(sequence(_)._1)
+      .map(_.asInstanceOf[ByteString])
+      .map(_.toArray)
+      .flatMap(identity[Array[Byte]]).toArray
+  )
+
   val expected = {
     val key = secret
     Seq(
       StreamStarted(encryptEncoded(f.getBytes, key), encryptEncoded(ct.getBytes, key), encryptEncoded(fr.getBytes, key), wrap(secret)),
-      encrypt("First line of content to encrypt".getBytes, key),
-      encrypt("second line of content to encrypt".getBytes, key),
-      encrypt("third line of content to encrypt".getBytes, key),
-      encrypt("fourth line of content to encrypt".getBytes, key),
-      StreamEnded(4),
+      StreamPart(0, encrypt("First line of content to encrypt".getBytes, key)),
+      StreamPart(1, encrypt("second line of content to encrypt".getBytes, key)),
+      StreamPart(2, encrypt("third line of content to encrypt".getBytes, key)),
+      StreamPart(3, encrypt("fourth line of content to encrypt".getBytes, key)),
+      StreamEnded(4, digeset),
       StreamingResult(4, Try(Done))
     ).zipWithIndex
   }
@@ -64,6 +69,7 @@ class StreamProcessorSpec extends TestKit(ActorSystem("test-system", ConfigFacto
   "stream processor" should {
     "successfully encrypt the stream it receives" in {
       within(500 millis){
+
         sequence.foreach{ e =>
           val (msg, i) = e
           streamProcessor ! msg
@@ -73,7 +79,8 @@ class StreamProcessorSpec extends TestKit(ActorSystem("test-system", ConfigFacto
               f0 mustBe f
               ct0 mustBe ct
               fr0 mustBe fr
-            case (_, it: Array[Byte]) => new String(it) mustBe new String(expected(i)._1.asInstanceOf[Array[Byte]])
+            case (_, StreamPart(_, d)) =>
+              new String(d) mustBe new String(expected(i)._1.asInstanceOf[StreamPart].chunk)
             case _ => reply mustBe expected(i)._1
           }
         }

@@ -6,8 +6,10 @@ import javax.crypto.KeyGenerator
 import akka.Done
 import akka.actor.{Actor, ActorRef, Props}
 import akka.stream.scaladsl.{Keep, Source}
-import akka.util.ByteString
+import akka.util.{Timeout, ByteString}
 import client.Client.{EndOfStream, GetOutcome, StreamingResult}
+import client.ClientService
+import org.scalamock.scalatest.MockFactory
 import org.scalatestplus.play.PlaySpec
 import streams.Actors
 
@@ -16,9 +18,11 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future, Promise}
 import scala.language.postfixOps
 import scala.util.{Failure, Random, Try}
+import akka.pattern.ask
 
-class EncryptionServiceSpec extends PlaySpec with Actors{
-
+class EncryptionServiceSpec extends PlaySpec with Actors with MockFactory {
+  implicit val timeout = Timeout(10 seconds)
+  val clientService = stub[ClientService]
   val secret = KeyGenerator.getInstance("AES").generateKey()
   val nextSecret = new NextSecret {
     override def apply(): Key = secret
@@ -40,11 +44,6 @@ class EncryptionServiceSpec extends PlaySpec with Actors{
     }
   }))
 
-
-  val findById = (actor: ActorRef) => new FindClientById() {
-    def apply(id: String): Future[ActorRef] = Future.successful(actor)
-  }
-
   def nextBytes = {
     val b = new Array[Byte](256)
     Random.nextBytes(b)
@@ -53,9 +52,13 @@ class EncryptionServiceSpec extends PlaySpec with Actors{
 
   "Sink provided by EncryptionService" should {
     "successfully process all bytes streams it receives" in {
+
       val stream = immutable.Iterable(Seq.fill[ByteString](10)(nextBytes): _*)
       val source = Source[ByteString](stream)
-      val sink =  new EncryptionService(findById(actor(0)), nextSecret).sink("", "", "", "")
+      val act = actor(0)
+      val sr = (act ? GetOutcome).mapTo[Future[StreamingResult]]
+      clientService.startStreaming _ when("", "", "", None) returns ((act, sr))
+      val sink =  new EncryptionService(clientService).sink("", "", None, "")
 
       val f: Future[StreamingResult] = source.toMat(sink)(Keep.right).run().flatMap(identity)
 
@@ -66,7 +69,10 @@ class EncryptionServiceSpec extends PlaySpec with Actors{
     "return a failure is something goes wrong during streaming" in {
       val stream = immutable.Iterable(Seq.fill[ByteString](10)(nextBytes): _*)
       val source = Source[ByteString](stream)
-      val sink =  new EncryptionService(findById(actor(4)), nextSecret).sink("", "", "", "")
+      val act = actor(4)
+      val sr = (act ? GetOutcome).mapTo[Future[StreamingResult]]
+      clientService.startStreaming _ when("", "", "", None) returns ((act, sr))
+      val sink =  new EncryptionService(clientService).sink("", "", None, "")
 
       val f: Future[StreamingResult] = source.toMat(sink)(Keep.right).run().flatMap(identity)
 

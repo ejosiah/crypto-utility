@@ -5,15 +5,18 @@ import java.security.Key
 import akka.Done
 import akka.actor._
 import akka.stream.scaladsl.Flow
-import akka.stream.{Materializer, OverflowStrategy}
+import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy}
 import akka.util.ByteString
+import akka.pattern.pipe
 import client.Client.{GetOutcome, StreamingResult, EndOfStream, StartStreaming}
 import com.cryptoutility.protocol.Events._
 import play.api.{Configuration, Logger}
 import play.api.libs.streams.ActorFlow
+import streams.Crypto
+import scala.concurrent.duration._
 
 import scala.collection.mutable
-import scala.concurrent.Promise
+import scala.concurrent.{Await, Promise}
 import scala.language.postfixOps
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
@@ -129,6 +132,8 @@ class StreamProcessor(out: ActorRef, clientId: String
   var mayBeSecret = Option.empty[Key]
   var processed = 0
   val promise = Promise[StreamingResult]()
+  val (digester, digest) = Crypto.actorDigester("MD5")(context.system, ActorMaterializer())
+  implicit val ec = context.system.dispatcher
 
 
   override def preStart(): Unit = log.info(s"streaming started for client: $clientId")
@@ -136,16 +141,23 @@ class StreamProcessor(out: ActorRef, clientId: String
   def receive = {
     case StartStreaming(f, ct, fr, sec) =>
       mayBeSecret = Option(sec)
-      out ! StreamStarted(encrypt0(f.getBytes, sec), encrypt0(ct.getBytes, sec), encrypt0(fr.getBytes, sec), wrap(sec))
+      out ! StreamStarted(
+          encrypt0(f.getBytes, sec)
+        , encrypt0(ct.getBytes, sec)
+        , encrypt0(fr.getBytes, sec)
+        , wrap(sec))
     case chunk: ByteString =>
       val secret = mayBeSecret.get
       val data =  encrypt(chunk.toArray, secret)
       out ! new StreamPart(processed, data)
+      digester ! ByteString(data)
       processed = processed + 1
       println(s"processed $processed chunks")
-    case EndOfStream =>
+    case eos @ EndOfStream =>
       println(s"stream ended processed $processed chunks")
-      out ! StreamEnded(processed)
+      digester ! eos
+      val end =  digest.map(StreamEnded(processed, _))
+      pipe(end) to  out
       promise.success(StreamingResult(processed, Try(Done)))
       self ! PoisonPill
     case GetOutcome => sender ! promise.future
