@@ -4,19 +4,18 @@ import java.security.Key
 
 import akka.Done
 import akka.actor._
+import akka.pattern.pipe
 import akka.stream.scaladsl.Flow
 import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy}
 import akka.util.ByteString
-import akka.pattern.pipe
-import client.Client.{GetOutcome, StreamingResult, EndOfStream, StartStreaming}
+import client.Client.{EndOfStream, GetOutcome, StartStreaming, StreamingResult}
 import com.cryptoutility.protocol.Events._
-import play.api.{Configuration, Logger}
 import play.api.libs.streams.ActorFlow
+import play.api.{Configuration, Logger}
 import streams.Crypto
-import scala.concurrent.duration._
 
 import scala.collection.mutable
-import scala.concurrent.{Await, Promise}
+import scala.concurrent.Promise
 import scala.language.postfixOps
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
@@ -51,13 +50,12 @@ object Client{
   }
 
   def streamProcessor(out: ActorRef, clientId: String
-                      , encrypt: (Array[Byte], Key) => Array[Byte]
                       , encryptEncoded: (Array[Byte], Key) => String
                       , wrap: Key => String): Props =
-    Props(classOf[StreamProcessor], out, clientId, encrypt, encryptEncoded, wrap)
+    Props(classOf[StreamProcessor], out, clientId, encryptEncoded, wrap)
 }
 
-class Client(out: ActorRef, registry: ActorRef, config: Configuration) extends Actor with ActorLogging{
+class Client(out: ActorRef, registry: ActorRef, config: Configuration) extends Actor{
   import Client._
   implicit val ec = context.system.dispatcher
   var mayBeUser = Option.empty[UserInfo]
@@ -77,7 +75,7 @@ class Client(out: ActorRef, registry: ActorRef, config: Configuration) extends A
         val encryptCtx = new EncryptionContext(pubKey, config)
         import encryptCtx._
 
-        val processor = context.actorOf(streamProcessor(out, clientId, encrypt, encryptEncoded, wrap))
+        val processor = context.actorOf(streamProcessor(out, clientId, encryptEncoded, wrap))
         context.watch(processor)
         processor ! start
         mayBeProcessor = Some(processor)
@@ -115,46 +113,44 @@ class ClientRegistry extends Actor{
       users -= user.clientId
     case Get(clientId) =>
      users.get(clientId) match {
-       case Some((_, ref)) => sender ! ref
+       case Some(user) => sender ! user
        case None => sender ! UserIsOffline
      }
     case Terminated(ref) =>
       users.find(e => e._2._2 == ref).map(_._2._1)
         .foreach( user => self ! OffLine(user))
-
   }
+
 }
 
+
 class StreamProcessor(out: ActorRef, clientId: String
-                      , encrypt: (Array[Byte], Key) => Array[Byte]
-                      , encrypt0: (Array[Byte], Key) => String
-                      , wrap: Key => String) extends Actor with ActorLogging{
-  var mayBeSecret = Option.empty[Key]
+                      , encrypt: (Array[Byte], Key) => String
+                      , wrap: Key => String) extends Actor{
   var processed = 0
+  var read = 0
   val promise = Promise[StreamingResult]()
   val (digester, digest) = Crypto.actorDigester("MD5")(context.system, ActorMaterializer())
   implicit val ec = context.system.dispatcher
 
+  implicit def strToBytes(str: String): Array[Byte] = str.getBytes()
 
-  override def preStart(): Unit = log.info(s"streaming started for client: $clientId")
+
+  override def preStart(): Unit = Logger.info(s"streaming started for client: $clientId")
 
   def receive = {
-    case StartStreaming(f, ct, fr, sec) =>
-      mayBeSecret = Option(sec)
+    case StartStreaming(f, ct, fr, secret) =>
       out ! StreamStarted(
-          encrypt0(f.getBytes, sec)
-        , encrypt0(ct.getBytes, sec)
-        , encrypt0(fr.getBytes, sec)
-        , wrap(sec))
+          encrypt(f, secret)
+        , encrypt(ct, secret)
+        , encrypt(fr, secret)
+        , wrap(secret))
     case chunk: ByteString =>
-      val secret = mayBeSecret.get
-      val data =  encrypt(chunk.toArray, secret)
-      out ! new StreamPart(processed, data)
-      digester ! ByteString(data)
+      out ! new StreamPart(processed, chunk.toArray)
+      digester ! chunk
       processed = processed + 1
-      println(s"processed $processed chunks")
     case eos @ EndOfStream =>
-      println(s"stream ended processed $processed chunks")
+      Logger.info(s"stream ended processed $processed chunks")
       digester ! eos
       val end =  digest.map(StreamEnded(processed, _))
       pipe(end) to  out

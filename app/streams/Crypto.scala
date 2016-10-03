@@ -1,13 +1,12 @@
 package streams
 
-import akka.actor.{ActorSystem, ActorRef, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.stream.ActorMaterializer
 import akka.stream.actor.ActorPublisher
-import akka.stream.scaladsl.{Sink, Flow, Keep, Source}
+import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.util.ByteString
 import client.Client.EndOfStream
 import com.cryptoutility.protocol.crypto.Hex
-import play.libs.concurrent.Futures
 
 import scala.annotation.tailrec
 import scala.concurrent.Future

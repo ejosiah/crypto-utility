@@ -1,12 +1,15 @@
 package services
 
+import java.security.Key
 import javax.inject.{Inject, Singleton}
 
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.Sink
+import akka.stream.javadsl.Keep
+import akka.stream.scaladsl.{Flow, Sink}
 import akka.util.{ByteString, Timeout}
 import client.Client.{EndOfStream, StreamingResult}
 import client.ClientService
+import streams.Encryptor
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -20,8 +23,16 @@ class EncryptionService @Inject()(clientService: ClientService)
 
   def sink(clientId: String, filename: String, contentType: Option[String], sender: String)
     : Sink[ByteString, Future[Future[StreamingResult]]] = {
-    val (client, streamingResult) = clientService.startStreaming(clientId, filename, sender, contentType)
-    Sink.actorRef(client, EndOfStream).mapMaterializedValue(_ => streamingResult)
+
+    val (client, cipher, streamingResult) = clientService.startStreaming(clientId, filename, sender, contentType)
+
+    Flow
+      .fromGraph(new Encryptor(cipher))
+      .toMat(Sink
+        .actorRef(client, EndOfStream)
+        .mapMaterializedValue(_ => streamingResult)
+      )((l, r) => r)
+
   }
 
 }
