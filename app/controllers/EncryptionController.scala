@@ -3,20 +3,15 @@ package controllers
 import javax.inject.{Inject, Singleton}
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
-import akka.util.Timeout
-import client.Client.StreamingResult
-import client.EncryptionContext
-import play.api.Configuration
+import com.cryptoutility.protocol.Events.StreamingResult
 import play.api.libs.streams.Accumulator
 import play.api.mvc.MultipartFormData.FilePart
-import play.api.mvc.{Controller, RequestHeader, Action}
+import play.api.mvc.{Action, Controller, RequestHeader}
 import play.core.parsers.Multipart._
 import services.EncryptionService
+
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.util.{Failure, Success}
 
 @Singleton
 class EncryptionController @Inject()(encryptionService: EncryptionService)

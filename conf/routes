@@ -8,8 +8,11 @@ GET     /                          controllers.HomeController.index(userId: Opti
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
 
-GET     /messagedigest              controllers.MessageDigiestController.index
-POST    /messagedigest              controllers.MessageDigiestController.upload
+GET     /messagedigest              controllers.MessageDigestController.index
+POST    /messagedigest              controllers.MessageDigestController.upload
+
+GET     /signature                  controllers.DigitalSignatureController.index
+POST    /signature                  controllers.DigitalSignatureController.index
 
 GET     /encrypt/                    controllers.EncryptionController.index
 POST    /encrypt/                    controllers.EncryptionController.upload

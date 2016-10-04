@@ -7,8 +7,8 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
 import akka.util.Timeout
-import client.Client.{GetOutcome, StartStreaming, UserIsOffline, StreamingResult}
-import com.cryptoutility.protocol.Events.{UserInfo, Event}
+import client.Client.{GetOutcome, StartStreaming, UserIsOffline}
+import com.cryptoutility.protocol.Events.{StreamingResult, UserInfo, Event}
 import play.api.Configuration
 import akka.pattern.ask
 import scala.concurrent.{Await, ExecutionContext, Future}

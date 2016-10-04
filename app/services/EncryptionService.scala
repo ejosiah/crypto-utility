@@ -7,8 +7,9 @@ import akka.actor.ActorSystem
 import akka.stream.javadsl.Keep
 import akka.stream.scaladsl.{Flow, Sink}
 import akka.util.{ByteString, Timeout}
-import client.Client.{EndOfStream, StreamingResult}
+import client.Client.EndOfStream
 import client.ClientService
+import com.cryptoutility.protocol.Events.StreamingResult
 import streams.Encryptor
 
 import scala.concurrent.duration._

@@ -2,13 +2,12 @@ package client
 
 import java.security.Key
 
-import akka.Done
 import akka.actor._
 import akka.pattern.pipe
 import akka.stream.scaladsl.Flow
 import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy}
 import akka.util.ByteString
-import client.Client.{EndOfStream, GetOutcome, StartStreaming, StreamingResult}
+import client.Client.{EndOfStream, GetOutcome, StartStreaming}
 import com.cryptoutility.protocol.Events._
 import play.api.libs.streams.ActorFlow
 import play.api.{Configuration, Logger}
@@ -17,8 +16,7 @@ import streams.Crypto
 import scala.collection.mutable
 import scala.concurrent.Promise
 import scala.language.postfixOps
-import scala.util.control.NonFatal
-import scala.util.{Failure, Success, Try}
+import scala.util.Failure
 
 object Client{
 
@@ -31,15 +29,6 @@ object Client{
   case object GetOutcome
   case object UserIsOffline
   case class StartStreaming(filename: String, contentType: String, from: String, secret: Key)
-  case class StreamingResult(count: Long, status: Try[Done]){
-
-    def wasSuccessful = status.isSuccess
-
-    def getError = status match {
-      case Failure(NonFatal(e)) => e
-      case Success(_) => throw new UnsupportedOperationException("streaming was successful")
-    }
-  }
 
   def props(registry: ActorRef, config: Configuration)(out: ActorRef) = Props(classOf[Client], out, registry, config)
 
@@ -89,6 +78,7 @@ class Client(out: ActorRef, registry: ActorRef, config: Configuration) extends A
         mayBeProcessor = None
     case msg @ GetOutcome => mayBeProcessor.foreach(_ forward msg)
     case msg @ EndOfStream => mayBeProcessor.foreach(_ forward msg)
+    case msg: StreamingResult => mayBeProcessor.foreach(_ forward msg)
   }
 
 
@@ -154,9 +144,10 @@ class StreamProcessor(out: ActorRef, clientId: String
       digester ! eos
       val end =  digest.map(StreamEnded(processed, _))
       pipe(end) to  out
-      promise.success(StreamingResult(processed, Try(Done)))
-      self ! PoisonPill
     case GetOutcome => sender ! promise.future
+    case res: StreamingResult =>
+      promise.success(res)
+      self ! PoisonPill
   }
 
   override def preRestart(reason: Throwable, message: Option[Any]): Unit = {

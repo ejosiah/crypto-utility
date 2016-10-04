@@ -12,7 +12,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 @Singleton
-class MessageDigiestController @Inject()(digestService: MessageDigestService)(implicit exec: ExecutionContext) extends  Controller{
+class MessageDigestController @Inject()(digestService: MessageDigestService)(implicit exec: ExecutionContext) extends  Controller{
 
 
   def index = Action.async {
